@@ -1,15 +1,14 @@
 package main
 
 import (
-	"net"
 	"log"
+	"net"
+	"utils"
 )
 
 func main(){
 	network := "tcp"
-	ip := "0.0.0.0"
-	port := "8001"
-	address := ip + ":" + port
+	address := utils.GetListenerIpAddress("0.0.0.0", "8001")
 
 	conn,err := net.Dial(network, address)
 	if err!=nil {
@@ -23,6 +22,4 @@ func main(){
 		}
 		conn.Close()
 	}
-
-
 }
