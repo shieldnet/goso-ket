@@ -1,32 +1,44 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
+	"github.com/shieldnet/goso-ket/hw2/utils"
 	"io"
 	"log"
 	"net"
-	"utils"
+	"strings"
 )
 
 func main() {
-	address := utils.GetListenerIpAddress("0.0.0.0","8001")
-	listener, err := utils.MakeTcpListener(address)
+	ip := "0.0.0.0"
+	port := "8001"
+
+	address := utils.GetListenerIpAddress(ip, port)
+
+	// Make TCP Listener
+	listener, err := utils.MakeTCPListener(address)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	defer listener.Close()
 
 	for {
+		// TCP has to make connection
 		conn, err := listener.Accept()
 		if err != nil {
 			log.Fatalln(err)
 		}
-		handle(conn)
+
+		remoteAddr := strings.Split(conn.RemoteAddr().String(), ":")
+
+		fmt.Printf("Connection requested from ('%s', '%s')\n", remoteAddr[0], remoteAddr[1] )
+		handleTCP(conn)
 		conn.Close()
 	}
-	return
 }
 
-func handle(connection net.Conn){
+func handleTCP(connection net.Conn) {
 	buffer := make([]byte, 1024)
 	for {
 		count, err := connection.Read(buffer)
@@ -40,8 +52,7 @@ func handle(connection net.Conn){
 		}
 		if count > 0 {
 			data := buffer[:count]
-			log.Println(string(data))
+			connection.Write(bytes.ToUpper(data))
 		}
 	}
-	return
 }
