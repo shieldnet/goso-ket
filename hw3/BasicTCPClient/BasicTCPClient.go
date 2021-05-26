@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/shieldnet/goso-ket/hw2/utils"
+	"github.com/shieldnet/goso-ket/hw3/utils"
 	"io"
 	"log"
 	"net"
