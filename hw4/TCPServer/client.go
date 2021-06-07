@@ -1,5 +1,7 @@
 package TCPServer
 
+import "net"
+
 type Client struct {
 	ClientInfoCommand
 	ClientNumber int32
@@ -7,6 +9,7 @@ type Client struct {
 	Ip string
 	Port string
 	Name string
+	Connection net.Conn
 }
 
 type ClientInfoCommand interface {
