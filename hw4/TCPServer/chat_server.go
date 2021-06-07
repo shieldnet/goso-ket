@@ -90,11 +90,22 @@ func (c *ChatServer) Run() {
 		fmt.Printf("Connection requested from ('%s', '%s')\n", remoteAddr[0], remoteAddr[1])
 
 		go func() {
-			cl := &Client{}
+			remoteAddr := strings.Split(conn.RemoteAddr().String(), ":")
+			cl := &Client{
+				Ip:              remoteAddr[0],
+				Port:            remoteAddr[1],
+				NthClientNumber: c.NthClient,
+				Connection:      conn,
+			}
+
+			c.NthClient++
+
+			c.TotalClientsNumber += 1
 			c.Handle(conn, cl)
+			c.TotalClientsNumber -= 1
+
 			defer conn.Close()
 		}()
-
 	}
 }
 
