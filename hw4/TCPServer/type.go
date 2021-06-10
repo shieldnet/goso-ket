@@ -8,4 +8,5 @@ type Request struct {
 type Response struct {
 	Status  string `json:"status"`
 	Message string `json:"answer"`
+	Items   map[string]interface{} `json:"items"`
 }
