@@ -27,7 +27,9 @@ func main() {
 
 	network := "tcp"
 
-	name := "kim-client"
+	rand.Seed(time.Now().UnixNano())
+	n, _ := uuid.NewV4()
+	name := n.String()
 
 	sigs := make(chan os.Signal)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -48,8 +50,22 @@ func main() {
 		return
 	} else {
 		Join(conn, name)
-		time.Sleep(10*time.Second)
 	}
+
+	go Listener(conn)
+
+	for {
+		in := bufio.NewReader(os.Stdin)
+		msg, err := in.ReadString('\n')
+		msg = strings.ReplaceAll(msg, "\n","")
+
+		if err != nil {
+			// 에러처리
+		}
+
+		Say(conn, msg)
+	}
+
 }
 
 func Join(conn net.Conn, name string) {
@@ -64,3 +80,47 @@ func Join(conn net.Conn, name string) {
 	conn.Write(b)
 }
 
+func Say(conn net.Conn, say string) {
+	var clientRequest = Request{
+		Command: "\\say",
+		Param: map[string]string{
+			"message": say,
+		},
+	}
+	b, _ := json.Marshal(clientRequest)
+
+	conn.Write(b)
+}
+
+func Listener(conn net.Conn) {
+	buffer := make([]byte, 1024)
+	for {
+		count, err := conn.Read(buffer)
+		if err != nil {
+			if io.EOF == err {
+				log.Printf("Connection End: %v", conn.RemoteAddr().String())
+			} else {
+				log.Printf("Receive Failed: %v", err)
+			}
+			break
+		}
+
+		if count > 0 {
+			data := buffer[:count]
+			req := Request{}
+
+			if err := json.Unmarshal(data, &req); err != nil {
+				log.Fatalln(err)
+				return
+			}
+
+
+			//fmt.Println("got packet: "+string(data))
+
+			if req.Command == "\\say" {
+				fmt.Printf("%s> %s\n", req.Param["from"], req.Param["message"])
+			}
+		}
+	}
+
+}
