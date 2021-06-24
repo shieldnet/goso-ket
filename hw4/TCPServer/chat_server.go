@@ -141,6 +141,7 @@ func (c *ChatServer) Handle(conn net.Conn, client *Client) {
 			// Handle Commands
 			for k := range c.Commands {
 				if req.Command == k {
+					log.Println("Handle Command:: "+req.Command)
 					resp = c.Commands[k](req, client)
 				}
 			}
@@ -148,6 +149,7 @@ func (c *ChatServer) Handle(conn net.Conn, client *Client) {
 			// Handle Hidden Commands
 			for k := range c.HiddenCommands {
 				if req.Command == k {
+					log.Println("Handle Command:: "+req.Command)
 					resp = c.HiddenCommands[k](req, client)
 				}
 			}
@@ -168,7 +170,12 @@ func (c *ChatServer) Join(req Request, client *Client) Response {
 	res := Response{}
 
 	if req.Command == "\\join" {
+		log.Println(req.Param["name"] + " is joined.")
 		c.Clients[req.Param["name"]] = client
+		client.Name = req.Param["name"]
+
+		res.Status = "200"
+		res.Message = "Ok, welcome "+req.Param["name"]
 	} else {
 		res.Status = "400"
 		res.Message = ""
@@ -189,8 +196,11 @@ func (c *ChatServer) Say(req Request, client *Client) Response {
 
 	b, _ := json.Marshal(clientRequest)
 
+	fmt.Println(len(c.Clients))
+
 	for _, cl := range c.Clients {
 		if cl.Name != client.Name {
+			log.Println("[Say] "+cl.Name+" to send ::" +  req.Param["message"])
 			cl.Connection.Write(b)
 		}
 	}
