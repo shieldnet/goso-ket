@@ -110,6 +110,8 @@ func (c *ChatServer) Run() {
 			c.Handle(conn, cl)
 			c.TotalClientsNumber -= 1
 
+			delete(c.Clients, cl.Name)
+
 			defer conn.Close()
 		}()
 	}

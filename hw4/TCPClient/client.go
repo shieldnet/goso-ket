@@ -1,13 +1,19 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
+	"math/rand"
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
+	"github.com/satori/go.uuid"
 )
 
 type Request struct {
