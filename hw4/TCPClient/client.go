@@ -69,8 +69,34 @@ func main() {
 			// 에러처리
 		}
 
+		Parse(conn, msg)
+
+	}
+
+}
+
+func Parse(conn net.Conn, msg string) {
+	if strings.Contains(msg, "\\wh") {
+		s := strings.Split(msg, " ")
+		if len(s) < 3 {
+			return
+		}
+		originMsg := strings.Join(s[2:], " ")
+		Whisper(conn, s[1], originMsg)
+	} else if strings.Contains(msg, "\\rename") {
+		s := strings.Split(msg, " ")
+		if len(s) < 2 {
+			return
+		}
+		nickName := strings.Join(s[1:], " ")
+		Rename(conn, nickName)
+
+	} else if strings.Contains(msg, "\\users") {
+		GetUserList(conn)
+	} else {
 		Say(conn, msg)
 	}
+
 
 }
 
@@ -92,6 +118,42 @@ func Say(conn net.Conn, say string) {
 		Param: map[string]string{
 			"message": say,
 		},
+	}
+	b, _ := json.Marshal(clientRequest)
+
+	conn.Write(b)
+}
+
+func Whisper(conn net.Conn, to, msg string) {
+	var clientRequest = Request{
+		Command: "\\wh",
+		Param: map[string]string{
+			"message": msg,
+			"user": to,
+		},
+	}
+	b, _ := json.Marshal(clientRequest)
+
+	conn.Write(b)
+
+}
+
+func Rename(conn net.Conn, nickName string) {
+	var clientRequest = Request{
+		Command: "\\rename",
+		Param: map[string]string{
+			"name": nickName,
+		},
+	}
+	b, _ := json.Marshal(clientRequest)
+
+	conn.Write(b)
+}
+
+func GetUserList(conn net.Conn) {
+	var clientRequest = Request{
+		Command: "\\users",
+		Param: map[string]string{},
 	}
 	b, _ := json.Marshal(clientRequest)
 
@@ -120,8 +182,7 @@ func Listener(conn net.Conn) {
 				return
 			}
 
-
-			//fmt.Println("got packet: "+string(data))
+			fmt.Println("got packet: "+string(data))
 
 			if req.Command == "\\say" {
 				fmt.Printf("%s> %s\n", req.Param["from"], req.Param["message"])
