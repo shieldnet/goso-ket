@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/gofrs/uuid"
 	"io"
 	"log"
 	"math/rand"
@@ -13,7 +14,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"github.com/satori/go.uuid"
 )
 
 type Request struct {

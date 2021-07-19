@@ -265,6 +265,7 @@ func (c *ChatServer) ChangeName(req Request, client *Client) Response {
 
 	delete(c.Clients, client.Name)
 	c.Clients[newName] = client
+	client.Name = newName
 
 	return Response{
 		Status: "200",
