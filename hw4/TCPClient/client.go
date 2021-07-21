@@ -45,6 +45,7 @@ func main() {
 
 	// SIGNAL detector (goroutine)
 	go func(conn net.Conn) {
+		go Listener(conn)
 		<-sigs
 		println("Signal detected, ", sigs)
 		conn.Close()
@@ -57,8 +58,6 @@ func main() {
 	} else {
 		Join(conn, name)
 	}
-
-	go Listener(conn)
 
 	for {
 		in := bufio.NewReader(os.Stdin)
