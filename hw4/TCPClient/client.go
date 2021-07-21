@@ -90,11 +90,12 @@ func Parse(conn net.Conn, msg string) {
 		}
 		nickName := strings.Join(s[1:], " ")
 		Rename(conn, nickName)
-
 	} else if strings.Contains(msg, "\\users") {
 		GetUserList(conn)
 	} else if strings.Contains(msg, "\\version") {
 		GetVersion(conn)
+	} else if strings.Contains(msg, "\\rtt") {
+		GetRtt(conn)
 	} else {
 		Say(conn, msg)
 	}
@@ -172,6 +173,16 @@ func GetVersion(conn net.Conn) {
 	conn.Write(b)
 }
 
+func GetRtt(conn net.Conn) {
+	var clientRequest = Request{
+		Command: "\\rtt",
+		Param:   map[string]string{},
+	}
+	b, _ := json.Marshal(clientRequest)
+
+	conn.Write(b)
+}
+
 func Listener(conn net.Conn) {
 	buffer := make([]byte, 1024)
 	for {
@@ -198,6 +209,8 @@ func Listener(conn net.Conn) {
 
 			if req.Command == "\\say" {
 				fmt.Printf("%s> %s\n", req.Param["from"], req.Param["message"])
+			} else if req.Command == "\\rtt"{
+				fmt.Printf("Your rtt is %s ms.\n", req.Param["rtt"])
 			}
 		}
 	}
