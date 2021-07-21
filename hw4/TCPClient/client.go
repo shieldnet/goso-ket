@@ -93,6 +93,8 @@ func Parse(conn net.Conn, msg string) {
 
 	} else if strings.Contains(msg, "\\users") {
 		GetUserList(conn)
+	} else if strings.Contains(msg, "\\version") {
+		GetVersion(conn)
 	} else {
 		Say(conn, msg)
 	}
@@ -154,6 +156,16 @@ func GetUserList(conn net.Conn) {
 	var clientRequest = Request{
 		Command: "\\users",
 		Param: map[string]string{},
+	}
+	b, _ := json.Marshal(clientRequest)
+
+	conn.Write(b)
+}
+
+func GetVersion(conn net.Conn) {
+	var clientRequest = Request{
+		Command: "\\version",
+		Param:   map[string]string{},
 	}
 	b, _ := json.Marshal(clientRequest)
 
