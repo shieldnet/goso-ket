@@ -2,7 +2,7 @@ package TCPServer
 
 type Request struct {
 	Command string            `json:"command"`
-	Param   map[string]string `json:"param"`
+	Param   map[string]interface{} `json:"param"`
 }
 
 type Response struct {

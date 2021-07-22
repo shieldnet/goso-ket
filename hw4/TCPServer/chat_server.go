@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"strings"
-	"time"
 )
 
 type ChatServer struct {
@@ -108,11 +107,6 @@ func (c *ChatServer) Run() {
 
 			c.TotalClientsNumber += 1
 			c.Handle(conn, cl)
-			c.TotalClientsNumber -= 1
-
-			delete(c.Clients, cl.Name)
-
-			defer conn.Close()
 		}()
 	}
 }
@@ -140,10 +134,23 @@ func (c *ChatServer) Handle(conn net.Conn, client *Client) {
 				return
 			}
 
+			// Check strings contains "i hate professor"
+			if req.Command == "\\say" {
+				if strings.Contains(strings.ToLower(req.Param["message"].(string)), "i hate professor") {
+					c.Exit(req, client)
+					msg := fmt.Sprintf(
+						"[%s is disconnected. There are %d users in the chat room.]",
+						client.Name, GetChatServer().TotalClientsNumber,
+					)
+					c.Broadcast(msg)
+					return
+				}
+			}
+
 			// Handle Commands
 			for k := range c.Commands {
 				if req.Command == k {
-					log.Println("Handle Command:: "+req.Command)
+					log.Println("Handle Command:: " + req.Command)
 					resp = c.Commands[k](req, client)
 				}
 			}
@@ -151,7 +158,7 @@ func (c *ChatServer) Handle(conn net.Conn, client *Client) {
 			// Handle Hidden Commands
 			for k := range c.HiddenCommands {
 				if req.Command == k {
-					log.Println("Handle Command:: "+req.Command)
+					log.Println("Handle Command:: " + req.Command)
 					resp = c.HiddenCommands[k](req, client)
 				}
 			}
@@ -161,10 +168,26 @@ func (c *ChatServer) Handle(conn net.Conn, client *Client) {
 				resp.Message = fmt.Sprintf(`The Command "%s" is not exist.`, req.Command)
 			}
 
-			b, _ := json.Marshal(resp)
-			conn.Write(b)
+			//b, _ := json.Marshal(resp)
+			//conn.Write(b)
 		}
 
+	}
+	c.Exit(Request{}, client)
+}
+
+func (c *ChatServer) Broadcast(message string) {
+	clientRequest := Request{
+		Command: "\\notice",
+		Param: map[string]interface{}{
+			"message": message,
+		},
+	}
+
+	b, _ := json.Marshal(clientRequest)
+
+	for _, cl := range c.Clients {
+		cl.Connection.Write(b)
 	}
 }
 
@@ -172,12 +195,12 @@ func (c *ChatServer) Join(req Request, client *Client) Response {
 	res := Response{}
 
 	if req.Command == "\\join" {
-		log.Println(req.Param["name"] + " is joined.")
-		c.Clients[req.Param["name"]] = client
-		client.Name = req.Param["name"]
+		log.Println(req.Param["name"].(string) + " is joined.")
+		c.Clients[req.Param["name"].(string)] = client
+		client.Name = req.Param["name"].(string)
 
 		res.Status = "200"
-		res.Message = "Ok, welcome "+req.Param["name"]
+		res.Message = "Ok, welcome " + req.Param["name"].(string)
 	} else {
 		res.Status = "400"
 		res.Message = ""
@@ -190,7 +213,7 @@ func (c *ChatServer) Say(req Request, client *Client) Response {
 
 	clientRequest := Request{
 		Command: "\\say",
-		Param: map[string]string {
+		Param: map[string]interface{}{
 			"from":    client.Name,
 			"message": req.Param["message"],
 		},
@@ -202,7 +225,7 @@ func (c *ChatServer) Say(req Request, client *Client) Response {
 
 	for _, cl := range c.Clients {
 		if cl.Name != client.Name {
-			log.Println("[Say] "+cl.Name+" to send ::" +  req.Param["message"])
+			log.Println("[Say] " + cl.Name + " to send ::" + req.Param["message"].(string))
 			cl.Connection.Write(b)
 		}
 	}
@@ -214,29 +237,46 @@ func (c *ChatServer) Say(req Request, client *Client) Response {
 }
 
 func (c *ChatServer) GetVersion(req Request, client *Client) Response {
-	return Response{
-		Status: "200",
-		Message: "OK",
-		Items: map[string]interface{} {
+	clientRequest := Request{
+		Command: "\\version",
+		Param: map[string]interface{}{
 			"version": c.Version,
 		},
+	}
+
+	b, _ := json.Marshal(clientRequest)
+	client.Connection.Write(b)
+
+	return Response{
+		Status:  "200",
+		Message: "OK",
 	}
 }
 
 func (c *ChatServer) GetUserList(req Request, client *Client) Response {
-
-	var userList []string
+	var (
+		userList []map[string]string
+	)
 
 	for _, cl := range c.Clients {
-		userList = append(userList, cl.Name)
+		userList = append(userList, map[string]string{
+			"name": cl.Name, "ip": cl.Ip, "port": cl.Port,
+		})
 	}
 
-	return Response{
-		Status: "200",
-		Message:"OK",
-		Items: map[string]interface{} {
-			"users" : userList,
+	clientRequest := Request{
+		Command: "\\users",
+		Param: map[string]interface{}{
+			"users": userList,
 		},
+	}
+
+	b, _ := json.Marshal(clientRequest)
+	client.Connection.Write(b)
+
+	return Response{
+		Status:  "200",
+		Message: "OK",
 	}
 }
 
@@ -245,17 +285,17 @@ func (c *ChatServer) Whisper(req Request, client *Client) Response {
 
 	clientRequest := Request{
 		Command: "\\say",
-		Param: map[string]string {
+		Param: map[string]interface{}{
 			"from":    client.Name,
 			"message": req.Param["message"],
 		},
 	}
 
 	b, _ := json.Marshal(clientRequest)
-	c.Clients[userName].Connection.Write(b)
+	c.Clients[userName.(string)].Connection.Write(b)
 
 	return Response{
-		Status: "200",
+		Status:  "200",
 		Message: "OK",
 	}
 }
@@ -264,37 +304,37 @@ func (c *ChatServer) ChangeName(req Request, client *Client) Response {
 	newName := req.Param["name"]
 
 	delete(c.Clients, client.Name)
-	c.Clients[newName] = client
-	client.Name = newName
+	c.Clients[newName.(string)] = client
+	client.Name = newName.(string)
 
 	return Response{
-		Status: "200",
+		Status:  "200",
 		Message: "OK",
 	}
 }
 
 func (c *ChatServer) GetRtt(req Request, client *Client) Response {
+
 	clientRequest := Request{
-		Command: "\\ping",
+		Command: "\\rtt",
+		Param: map[string]interface{}{
+			"time": int64(req.Param["time"].(float64)),
+		},
 	}
 
 	b, _ := json.Marshal(clientRequest)
-
-	start := time.Now()
 	client.Connection.Write(b)
-	fin := time.Now()
-
-	rtt := fin.Sub(start).Milliseconds()
 
 	return Response{
-		Status: "200",
+		Status:  "200",
 		Message: "OK",
-		Items : map[string]interface{} {
-			"rtt" : rtt,
-		},
 	}
 }
 
 func (c *ChatServer) Exit(req Request, client *Client) Response {
+	defer client.Connection.Close()
+	c.TotalClientsNumber -= 1
+	delete(c.Clients, client.Name)
+
 	return Response{}
 }
